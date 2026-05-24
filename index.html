@@ -1,0 +1,1445 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Fuel Sales Kiosk</title>
+    <style>
+      /* --- Custom Swiss-Modern High Contrast Kiosk Styles --- */
+      :root {
+        --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        --bg-main: #0c101b;      /* sleek dark canvas */
+        --bg-card: #172033;      /* cards for contrast */
+        --bg-card-hover: #1e2942;
+        --text-primary: #ffffff;
+        --text-secondary: #94a3b8;
+        
+        /* High contrast button colors */
+        --color-success: #10b981;  /* emerald green */
+        --color-warning: #f59e0b;  /* heavy caution yellow */
+        --color-danger: #ef4444;   /* vivid signal red */
+        
+        /* Physical Grade mapping colors */
+        --fuel-87: #1d4ed8;       /* 87 Regular Blue */
+        --fuel-89: #facc15;       /* 89 plus/mid Yellow */
+        --fuel-93: #dc2626;       /* 93 Premium Red */
+        
+        --border-radius: 16px;
+        --btn-min-height: 80px;
+        --typography-min: 24px;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        user-select: none;
+        -webkit-user-select: none;
+        touch-action: manipulation;
+      }
+
+      body {
+        font-family: var(--font-sans);
+        background-color: var(--bg-main);
+        color: var(--text-primary);
+        height: 100vh;
+        height: 100dvh;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+
+      /* --- App Container Frame --- */
+      #app-container {
+        width: 100%;
+        max-width: 1024px;
+        height: 100%;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+        padding: 24px;
+      }
+
+      /* --- Header Panel --- */
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 70px;
+        padding-bottom: 16px;
+        border-bottom: 2px solid #1e293b;
+        margin-bottom: 16px;
+      }
+
+      .back-link {
+        font-size: 26px;
+        font-weight: 700;
+        color: var(--text-secondary);
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 10px 20px;
+        border-radius: 8px;
+        display: inline-flex;
+        align-items: center;
+        text-decoration: none;
+        min-height: 60px;
+        background-color: #1e293b;
+      }
+
+      .back-link:active {
+        background-color: #334155;
+        color: var(--text-primary);
+      }
+
+      .step-indicator {
+        font-size: 24px;
+        font-family: monospace;
+        color: var(--color-success);
+        background: #0f1c2e;
+        padding: 6px 16px;
+        border-radius: 20px;
+        border: 2px solid #115e59;
+        font-weight: bold;
+      }
+
+      /* --- Screens Router --- */
+      .screen {
+        flex: 1;
+        display: none;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+        animation: fadeIn 150ms ease-out forwards;
+      }
+
+      .screen.active-screen {
+        display: flex !important;
+      }
+
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      /* --- Global Typography --- */
+      h1, .prompt-title {
+        font-size: clamp(28px, 4.5vw, 42px);
+        font-weight: 800;
+        text-align: center;
+        margin-bottom: 24px;
+        line-height: 1.2;
+        letter-spacing: -0.02em;
+        width: 100%;
+      }
+
+      /* --- Screen 1: Language Grid --- */
+      .languages-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 20px;
+        width: 100%;
+        max-width: 900px;
+        margin: auto 0;
+      }
+
+      .lang-btn {
+        min-height: 110px;
+        background-color: var(--bg-card);
+        color: var(--text-primary);
+        border: 3px solid #334155;
+        border-radius: var(--border-radius);
+        font-size: 32px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: transform 100ms ease, border-color 100ms ease;
+        padding: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
+      }
+
+      .lang-btn:active {
+        transform: scale(0.97);
+        background-color: var(--bg-card-hover);
+        border-color: var(--color-success);
+      }
+
+      /* Native Local Flag and Script indicators */
+      .lang-btn::after {
+        content: "";
+        display: inline-block;
+        margin-left: 14px;
+        font-size: 26px;
+      }
+      #lang-en::after { content: "🇺🇸"; }
+      #lang-es::after { content: "🇲🇽"; }
+      #lang-pt::after { content: "🇧🇷"; }
+      #lang-ht::after { content: "🇭🇹"; }
+      #lang-jam::after { content: "🇯🇲"; }
+
+      /* --- Screen 2 & 3: Numerical Keypads --- */
+      .input-readout-container {
+        width: 100%;
+        max-width: 500px;
+        background-color: #0b0f19;
+        border: 4px dashed #334155;
+        border-radius: var(--border-radius);
+        padding: 16px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin-bottom: 16px;
+        min-height: 100px;
+      }
+
+      .input-readout {
+        font-size: 54px;
+        font-weight: 800;
+        font-family: monospace;
+        color: var(--color-warning);
+        text-align: center;
+        letter-spacing: 2px;
+      }
+
+      .keypad-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        width: 100%;
+        max-width: 500px;
+      }
+
+      .key-btn {
+        min-height: 85px;
+        background-color: var(--bg-card);
+        color: var(--text-primary);
+        border: 3px solid #334155;
+        border-radius: var(--border-radius);
+        font-size: 34px;
+        font-weight: 800;
+        font-family: monospace;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: transform 100ms ease;
+      }
+
+      .key-btn:active {
+        transform: scale(0.95);
+        background-color: var(--bg-card-hover);
+        border-color: var(--text-primary);
+      }
+
+      .key-btn.backspace-key {
+        background-color: #3f1919;
+        border-color: #7f1d1d;
+        color: #fca5a5;
+      }
+
+      .key-btn.backspace-key:active {
+        background-color: #7f1d1d;
+      }
+
+      .confirm-bar {
+        width: 100%;
+        max-width: 500px;
+        margin-top: 16px;
+      }
+
+      .btn-primary {
+        width: 100%;
+        min-height: 85px;
+        background-color: var(--color-success);
+        color: #ffffff;
+        border: none;
+        border-radius: var(--border-radius);
+        font-size: 30px;
+        font-weight: 800;
+        cursor: pointer;
+        box-shadow: 0 6px 12px rbg(16, 185, 129, 0.4);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: opacity 150ms ease, transform 100ms ease;
+      }
+
+      .btn-primary:active {
+        transform: scale(0.98);
+        filter: brightness(1.1);
+      }
+
+      .btn-primary:disabled {
+        background-color: #334155;
+        color: #64748b;
+        cursor: not-allowed;
+        box-shadow: none;
+        opacity: 0.6;
+      }
+
+      .error-alert {
+        color: #ef4444;
+        font-size: 24px;
+        font-weight: 700;
+        text-align: center;
+        margin-top: 10px;
+        min-height: 36px;
+      }
+
+      /* --- Screen 3: Amounts selector --- */
+      .amounts-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+        width: 100%;
+        max-width: 600px;
+        margin-bottom: 16px;
+      }
+
+      .amount-btn {
+        min-height: 95px;
+        background-color: var(--bg-card);
+        color: var(--text-primary);
+        border: 4px solid #334155;
+        border-radius: var(--border-radius);
+        font-size: 36px;
+        font-weight: 800;
+        font-family: monospace;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: transform 100ms ease, border-color 100ms ease;
+      }
+
+      .amount-btn:active {
+        transform: scale(0.96);
+        background-color: var(--bg-card-hover);
+        border-color: var(--color-success);
+      }
+
+      .amount-btn.other-btn {
+        grid-column: span 2;
+        background-color: #1e1b4b;
+        border-color: #4f46e5;
+        color: #c7d2fe;
+      }
+
+      .amount-btn.other-btn:active {
+        background-color: #312e81;
+      }
+
+      /* Custom keypad panel wrapper */
+      #custom-amount-panel {
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
+      }
+
+      /* --- Screen 4: Fuel Grades --- */
+      .grades-container {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        width: 100%;
+        max-width: 700px;
+        margin: auto 0;
+      }
+
+      .grade-card {
+        min-height: 120px;
+        border-radius: var(--border-radius);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 24px 32px;
+        transition: transform 120ms ease;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+      }
+
+      .grade-card:active {
+        transform: scale(0.97);
+        filter: brightness(1.2);
+      }
+
+      /* Grade Branding Mapping */
+      .grade-regular {
+        background-color: var(--fuel-87);
+        border: 4px solid #3b82f6;
+        color: #ffffff;
+      }
+      .grade-midgrade {
+        background-color: var(--fuel-89);
+        border: 4px solid #fde047;
+        color: #0f172a; /* high contrast black on yellow */
+      }
+      .grade-premium {
+        background-color: var(--fuel-93);
+        border: 4px solid #ef4444;
+        color: #ffffff;
+      }
+
+      .grade-left {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .grade-number-badge {
+        font-size: 56px;
+        font-weight: 900;
+        font-family: monospace;
+        line-height: 1;
+      }
+
+      .grade-label {
+        font-size: 26px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-top: 4px;
+      }
+
+      .grade-right {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        justify-content: center;
+      }
+
+      .grade-arrow {
+        font-size: 38px;
+        font-weight: 900;
+        line-height: 1;
+        opacity: 0.85;
+      }
+
+      /* --- Screen 5: Success / Customer Facing --- */
+      .success-title-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin-bottom: 16px;
+        text-align: center;
+      }
+
+      .giant-checkmark-ring {
+        width: 90px;
+        height: 90px;
+        background-color: #064e3b;
+        border: 6px solid var(--color-success);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 16px;
+        color: var(--color-success);
+        font-size: 48px;
+        font-weight: 900;
+        box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
+      }
+
+      .done-headline {
+        font-size: 38px;
+        color: var(--color-success);
+        font-weight: 900;
+        margin-bottom: 8px;
+      }
+
+      .nav-instruction {
+        font-size: 26px;
+        line-height: 1.4;
+        text-align: center;
+        max-width: 800px;
+        color: #e2e8f0;
+      }
+
+      .nav-instruction strong {
+        color: #60a5fa;
+        text-underline-offset: 4px;
+      }
+
+      /* SVG gas pump panel highlighting representation */
+      .pump-graphic-box {
+        width: 100%;
+        max-width: 520px;
+        margin: 16px auto;
+        padding: 12px;
+        background-color: #0d1222;
+        border-radius: var(--border-radius);
+        border: 2px solid #1e293b;
+        box-shadow: inset 0 2px 10px rgba(0,0,0,0.8);
+      }
+
+      .svg-pulse-active {
+        animation: pulseRing 1.5s ease infinite;
+        display: block !important;
+      }
+
+      @keyframes pulseRing {
+        0% { stroke-dashoffset: 0; stroke-width: 6; stroke: #10b981; }
+        50% { stroke-width: 12; stroke: #047857; }
+        100% { stroke-dashoffset: 32; stroke-width: 6; stroke: #10b981; }
+      }
+
+      /* Clerk Bottom Box Visual Summary */
+      .clerk-bottom-belt {
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        border-top: 3px solid #1e293b;
+        padding-top: 16px;
+        margin-top: auto;
+      }
+
+      .clerk-indicator-card {
+        background-color: #0f172a;
+        border: 2.5px solid #27272a;
+        border-radius: 8px;
+        padding: 12px 16px;
+        text-align: left;
+        max-width: 450px;
+      }
+
+      .clerk-indicator-card h4 {
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        margin-bottom: 6px;
+        letter-spacing: 0.05em;
+        font-family: monospace;
+      }
+
+      .clerk-data {
+        font-size: 18px;
+        color: #ffffff;
+        font-family: monospace;
+        line-height: 1.3;
+      }
+
+      .clerk-data strong {
+        color: var(--color-warning);
+        font-size: 20px;
+      }
+
+      .btn-new-cust {
+        min-height: 85px;
+        width: auto;
+        min-width: 280px;
+        background-color: var(--color-success);
+        color: #ffffff;
+        border: none;
+        border-radius: var(--border-radius);
+        font-size: 26px;
+        font-weight: 800;
+        cursor: pointer;
+        padding: 10px 24px;
+        box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        transition: transform 100ms ease;
+      }
+
+      .btn-new-cust:active {
+        transform: scale(0.96);
+      }
+
+      /* SVG class rules */
+      .svg-btn {
+        transition: opacity 200ms ease;
+      }
+
+      /* --- Responsive layout refinements --- */
+      @media (max-width: 768px) {
+        #app-container {
+          padding: 16px;
+        }
+
+        .lang-btn {
+          font-size: 28px;
+          min-height: 90px;
+        }
+
+        .key-btn {
+          min-height: 70px;
+          font-size: 30px;
+        }
+
+        .grade-card {
+          min-height: 95px;
+          padding: 16px 24px;
+        }
+
+        .grade-number-badge { font-size: 42px; }
+        .grade-label { font-size: 20px; }
+        .grade-price { font-size: 32px; }
+        
+        .amounts-grid {
+          gap: 12px;
+        }
+        .amount-btn {
+          min-height: 80px;
+          font-size: 28px;
+        }
+
+        .giant-checkmark-ring {
+          width: 70px;
+          height: 70px;
+          font-size: 36px;
+          border-width: 4px;
+          margin-bottom: 8px;
+        }
+        .done-headline { font-size: 30px; }
+        .nav-instruction { font-size: 21px; }
+
+        .clerk-bottom-belt {
+          flex-direction: column;
+          align-items: stretch;
+          gap: 12px;
+        }
+
+        .clerk-indicator-card {
+          max-width: 100%;
+        }
+
+        .btn-new-cust {
+          width: 100%;
+          min-height: 75px;
+        }
+      }
+
+      /* Landscape phone/tablet layout optimization helper classes */
+      @media (max-height: 580px) and (orientation: landscape) {
+        #app-container {
+          padding: 10px 16px;
+        }
+
+        header {
+          min-height: 50px;
+          margin-bottom: 8px;
+          padding-bottom: 4px;
+        }
+
+        h1, .prompt-title {
+          font-size: 26px;
+          margin-bottom: 12px;
+        }
+
+        .languages-grid {
+          grid-template-columns: repeat(3, 1fr) !important;
+          gap: 10px;
+        }
+        .lang-btn {
+          min-height: 65px;
+          font-size: 22px;
+          padding: 8px;
+        }
+
+        /* Side-by-side keypad layout in landscaped orientation */
+        .keypad-screen-layout {
+          display: flex;
+          flex-direction: row !important;
+          justify-content: center;
+          align-items: center;
+          gap: 20px;
+          width: 100%;
+        }
+
+        .input-readout-container {
+          margin-bottom: 0px !important;
+          max-width: 220px !important;
+          min-height: 80px !important;
+        }
+        
+        .input-readout {
+          font-size: 36px !important;
+        }
+
+        .keypad-grid {
+          max-width: 320px !important;
+          gap: 8px !important;
+        }
+
+        .key-btn {
+          min-height: 55px !important;
+          font-size: 24px !important;
+        }
+
+        .confirm-bar {
+          max-width: 320px !important;
+          margin-top: 8px !important;
+        }
+
+        .btn-primary {
+          min-height: 55px !important;
+          font-size: 24px !important;
+        }
+
+        .amounts-grid {
+          grid-template-columns: repeat(4, 1fr) !important;
+          gap: 8px !important;
+          max-width: 800px;
+        }
+
+        .amount-btn {
+          min-height: 65px !important;
+          font-size: 26px !important;
+        }
+        .amount-btn.other-btn {
+          grid-column: span 4 !important;
+        }
+
+        .grades-container {
+          flex-direction: row !important;
+          gap: 12px !important;
+          max-width: 100% !important;
+        }
+
+        .grade-card {
+          flex: 1;
+          flex-direction: column !important;
+          justify-content: center !important;
+          align-items: center !important;
+          padding: 10px !important;
+          min-height: 110px !important;
+          text-align: center;
+        }
+
+        .grade-left { align-items: center !important; }
+        .grade-right { align-items: center !important; }
+        .grade-number-badge { font-size: 36px !important; }
+        .grade-label { font-size: 16px !important; margin-top: 0px !important; }
+        .grade-price { font-size: 28px !important; }
+
+        .success-title-container {
+          flex-direction: row !important;
+          justify-content: center;
+          gap: 20px;
+          margin-bottom: 4px !important;
+        }
+
+        .giant-checkmark-ring {
+          width: 50px;
+          height: 50px;
+          font-size: 24px;
+          margin-bottom: 0px !important;
+        }
+
+        .done-headline { font-size: 24px !important; margin-bottom: 0px; }
+        .nav-instruction { font-size: 18px !important; max-width: 600px; }
+
+        .pump-graphic-box {
+          max-width: 360px !important;
+          margin: 4px auto !important;
+          padding: 4px !important;
+        }
+
+        #pump-svg {
+          height: 130px !important;
+        }
+
+        .clerk-bottom-belt {
+          flex-direction: row !important;
+          padding-top: 8px !important;
+          margin-top: 4px !important;
+        }
+
+        .clerk-indicator-card {
+          padding: 4px 10px !important;
+        }
+        .clerk-indicator-card h4 {
+          font-size: 12px !important;
+          margin-bottom: 2px !important;
+        }
+        .clerk-data {
+          font-size: 14px !important;
+        }
+        .clerk-data strong {
+          font-size: 16px !important;
+        }
+
+        .btn-new-cust {
+          min-height: 55px !important;
+          min-width: 200px !important;
+          font-size: 20px !important;
+          padding: 4px 16px !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Main Framed Kiosk View -->
+    <div id="app-container">
+      
+      <!-- Shared Navigation Header (hides on Step 1) -->
+      <header id="shared-header" style="visibility: hidden;">
+        <button id="back-nav-btn" class="back-link" onclick="handleBack()">&larr; Back</button>
+        <div id="step-indicator" class="step-indicator">STEP 2 / 5</div>
+      </header>
+
+      <!-- STEP 1: Language Selection -->
+      <div id="screen-1" class="screen active-screen">
+        <h1 id="prompt-step1">Language / Idioma</h1>
+        <div class="languages-grid">
+          <button id="lang-en" class="lang-btn" onclick="selectLocale('en')">English</button>
+          <button id="lang-es" class="lang-btn" onclick="selectLocale('es')">Español</button>
+          <button id="lang-pt" class="lang-btn" onclick="selectLocale('pt')">Português</button>
+          <button id="lang-ht" class="lang-btn" onclick="selectLocale('ht')">Kreyòl Ayisyen</button>
+          <button id="lang-jam" class="lang-btn" onclick="selectLocale('jam')">Patois</button>
+        </div>
+      </div>
+
+      <!-- STEP 2: Pump Selection -->
+      <div id="screen-2" class="screen">
+        <h1 id="prompt-step2">Enter Pump Number (1 - 12)</h1>
+        
+        <div class="keypad-screen-layout">
+          <!-- Readout -->
+          <div class="input-readout-container">
+            <span id="pump-readout" class="input-readout">PUMP --</span>
+          </div>
+
+          <!-- Keypad Wrapper -->
+          <div style="width: 100%; display: flex; flex-direction: column; align-items: center;">
+            <div id="pump-keypad" class="keypad-grid">
+              <button class="key-btn" onclick="pressPumpDigit('1')">1</button>
+              <button class="key-btn" onclick="pressPumpDigit('2')">2</button>
+              <button class="key-btn" onclick="pressPumpDigit('3')">3</button>
+              <button class="key-btn" onclick="pressPumpDigit('4')">4</button>
+              <button class="key-btn" onclick="pressPumpDigit('5')">5</button>
+              <button class="key-btn" onclick="pressPumpDigit('6')">6</button>
+              <button class="key-btn" onclick="pressPumpDigit('7')">7</button>
+              <button class="key-btn" onclick="pressPumpDigit('8')">8</button>
+              <button class="key-btn" onclick="pressPumpDigit('9')">9</button>
+              <button class="key-btn backspace-key" onclick="deletePumpDigit()">⌫</button>
+              <button class="key-btn" onclick="pressPumpDigit('0')">0</button>
+              <button class="key-btn" style="background-color: #1e293b; color: #4ade80;" onclick="clearPumpDigits()">C</button>
+            </div>
+            
+            <div id="pump-error" class="error-alert"></div>
+            
+            <div class="confirm-bar">
+              <button id="pump-confirm-btn" class="btn-primary" onclick="confirmPump()" disabled>Confirm Pump &rarr;</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 3: Transaction Amount -->
+      <div id="screen-3" class="screen">
+        <!-- Amount Selection Screen Body -->
+        <div id="preset-amount-container" style="width: 100%; display: flex; flex-direction: column; align-items: center;">
+          <h1 id="prompt-step3">Select Fuel Amount</h1>
+          <div class="amounts-grid">
+            <button class="amount-btn" onclick="selectAmountPreset(10)">$10</button>
+            <button class="amount-btn" onclick="selectAmountPreset(20)">$20</button>
+            <button class="amount-btn" onclick="selectAmountPreset(30)">$30</button>
+            <button class="amount-btn" onclick="selectAmountPreset(40)">$40</button>
+            <button class="amount-btn" onclick="selectAmountPreset(60)">$60</button>
+            <button class="amount-btn" onclick="selectAmountPreset(100)">$100</button>
+            <button class="amount-btn other-btn" id="btn-amount-other" onclick="showCustomAmountKeypad()">Other Amount</button>
+          </div>
+        </div>
+
+        <!-- Hidden Custom Keypad for Amount -->
+        <div id="custom-amount-panel">
+          <h1 id="prompt-step3-custom">Enter Amount ($)</h1>
+          <div class="keypad-screen-layout">
+            <div class="input-readout-container">
+              <span id="amount-readout" class="input-readout">$ --</span>
+            </div>
+            
+            <div style="width: 100%; display: flex; flex-direction: column; align-items: center;">
+              <div class="keypad-grid">
+                <button class="key-btn" onclick="pressAmountDigit('1')">1</button>
+                <button class="key-btn" onclick="pressAmountDigit('2')">2</button>
+                <button class="key-btn" onclick="pressAmountDigit('3')">3</button>
+                <button class="key-btn" onclick="pressAmountDigit('4')">4</button>
+                <button class="key-btn" onclick="pressAmountDigit('5')">5</button>
+                <button class="key-btn" onclick="pressAmountDigit('6')">6</button>
+                <button class="key-btn" onclick="pressAmountDigit('7')">7</button>
+                <button class="key-btn" onclick="pressAmountDigit('8')">8</button>
+                <button class="key-btn" onclick="pressAmountDigit('9')">9</button>
+                <button class="key-btn backspace-key" onclick="deleteAmountDigit()">⌫</button>
+                <button class="key-btn" onclick="pressAmountDigit('0')">0</button>
+                <button class="key-btn" style="background-color: #1e293b; color: #f43f5e;" onclick="cancelCustomAmount()">← Cancel</button>
+              </div>
+
+              <div id="amount-error" class="error-alert"></div>
+
+              <div class="confirm-bar">
+                <button id="amount-confirm-btn" class="btn-primary" onclick="confirmCustomAmount()" disabled>Confirm Amount</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 4: Fuel Grade Selection -->
+      <div id="screen-4" class="screen">
+        <h1 id="prompt-step4">Please Choose Fuel Grade</h1>
+        <div class="grades-container">
+          <!-- 87 Regular Blue -->
+          <div id="btn-grade-regular" class="grade-card grade-regular" onclick="selectFuelGrade('regular')">
+            <div class="grade-left">
+              <span class="grade-number-badge">87</span>
+              <span id="lbl-grade-regular" class="grade-label">Regular</span>
+            </div>
+            <div class="grade-right">
+              <span class="grade-arrow">&rarr;</span>
+            </div>
+          </div>
+
+          <!-- 89 Mid-grade Yellow -->
+          <div id="btn-grade-midgrade" class="grade-card grade-midgrade" onclick="selectFuelGrade('midgrade')">
+            <div class="grade-left">
+              <span class="grade-number-badge">89</span>
+              <span id="lbl-grade-midgrade" class="grade-label">Mid-Grade</span>
+            </div>
+            <div class="grade-right">
+              <span class="grade-arrow" style="color: #0f172a;">&rarr;</span>
+            </div>
+          </div>
+
+          <!-- 93 Premium Red -->
+          <div id="btn-grade-premium" class="grade-card grade-premium" onclick="selectFuelGrade('premium')">
+            <div class="grade-left">
+              <span class="grade-number-badge">93</span>
+              <span id="lbl-grade-premium" class="grade-label">Premium</span>
+            </div>
+            <div class="grade-right">
+              <span class="grade-arrow">&rarr;</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 5: Customer-Facing Closure Screen -->
+      <div id="screen-5" class="screen">
+        <div class="success-title-container">
+          <div class="giant-checkmark-ring">&checkmark;</div>
+          <h1 id="success-done" class="done-headline">Transaction Done!</h1>
+          <p id="success-instructions" class="nav-instruction">
+            Please walk to <strong>Pump 5</strong>.<br>Press the <strong>87 Regular</strong> button on the pump, then begin pumping.
+          </p>
+        </div>
+
+        <!-- Inline SVG cluster mapping the physical gas pump button selected -->
+        <div class="pump-graphic-box">
+          <svg id="pump-svg" width="100%" height="180" viewBox="0 0 500 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- Pump metal panel panel framing -->
+            <rect x="15" y="15" width="470" height="210" rx="16" fill="#1e293b" stroke="#475569" stroke-width="6"/>
+            <rect x="15" y="15" width="470" height="40" rx="16" fill="#0f172a" />
+            <text x="250" y="40" fill="#94a3b8" font-size="14" font-family="monospace" font-weight="bold" text-anchor="middle" letter-spacing="2">PRESS BUTTON ON PHYSICAL DISPENSER</text>
+            
+            <!-- Button Regular 87 Blue -->
+            <g id="svg-btn-regular" class="svg-btn">
+              <rect x="35" y="70" width="130" height="135" rx="12" fill="#1e3a8a" stroke="#2563eb" stroke-width="4"/>
+              <rect x="45" y="80" width="110" height="115" rx="8" fill="#2563eb"/>
+              <text x="100" y="135" fill="#ffffff" font-size="52" font-weight="900" text-anchor="middle" font-family="system-ui, sans-serif">87</text>
+              <text x="100" y="170" fill="#93c5fd" font-size="14" font-weight="bold" text-anchor="middle" font-family="system-ui, sans-serif">REGULAR</text>
+            </g>
+            
+            <!-- Button Midgrade 89 Yellow -->
+            <g id="svg-btn-midgrade" class="svg-btn">
+              <rect x="185" y="70" width="130" height="135" rx="12" fill="#713f12" stroke="#eab308" stroke-width="4"/>
+              <rect x="195" y="80" width="110" height="115" rx="8" fill="#eab308"/>
+              <text x="250" y="135" fill="#0f172a" font-size="52" font-weight="900" text-anchor="middle" font-family="system-ui, sans-serif">89</text>
+              <text x="250" y="170" fill="#451a03" font-size="14" font-weight="bold" text-anchor="middle" font-family="system-ui, sans-serif">MID-GRADE</text>
+            </g>
+            
+            <!-- Button Premium 93 Red -->
+            <g id="svg-btn-premium" class="svg-btn">
+              <rect x="335" y="70" width="130" height="135" rx="12" fill="#7f1d1d" stroke="#dc2626" stroke-width="4"/>
+              <rect x="345" y="80" width="110" height="115" rx="8" fill="#dc2626"/>
+              <text x="400" y="135" fill="#ffffff" font-size="52" font-weight="900" text-anchor="middle" font-family="system-ui, sans-serif">93</text>
+              <text x="400" y="170" fill="#fca5a5" font-size="14" font-weight="bold" text-anchor="middle" font-family="system-ui, sans-serif">PREMIUM</text>
+            </g>
+            
+            <!-- Highlighting Pulse Ring pointers -->
+            <circle id="svg-pulse-regular" class="svg-pulse" cx="100" cy="137" r="72" fill="none" stroke="#10b981" stroke-width="8" stroke-dasharray="10, 6" display="none" />
+            <circle id="svg-pulse-midgrade" class="svg-pulse" cx="250" cy="137" r="72" fill="none" stroke="#10b981" stroke-width="8" stroke-dasharray="10, 6" display="none" />
+            <circle id="svg-pulse-premium" class="svg-pulse" cx="400" cy="137" r="72" fill="none" stroke="#10b981" stroke-width="8" stroke-dasharray="10, 6" display="none" />
+
+            <!-- Highlight Arrows -->
+            <path id="svg-arrow-regular" d="M 100 230 L 85 208 L 115 208 Z" fill="#10b981" display="none" />
+            <path id="svg-arrow-midgrade" d="M 250 230 L 235 208 L 265 208 Z" fill="#10b981" display="none" />
+            <path id="svg-arrow-premium" d="M 400 230 L 385 208 L 415 208 Z" fill="#10b981" display="none" />
+          </svg>
+        </div>
+
+        <!-- Localized Clerk + Reset Belt -->
+        <div class="clerk-bottom-belt">
+          <!-- Small English Clerk Indicator Box -->
+          <div id="clerk-summary-card" class="clerk-indicator-card">
+            <h4>Clerk Summary (English)</h4>
+            <div id="clerk-summary-values" class="clerk-data">
+              Pump: <strong id="clerk-pump">--</strong> | Value: <strong id="clerk-amount">--</strong> | Fuel Grade: <strong id="clerk-grade">--</strong>
+            </div>
+          </div>
+          
+          <!-- Start Over Button -->
+          <button id="btn-start-over" class="btn-new-cust" onclick="resetState()">
+            <span id="txt-btn-new-customer">New Customer / reset</span> &rarr;
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Central Localization Dictionary & State Machine Controller -->
+    <script>
+      // --- Localization Dictionary ---
+      const translations = {
+        en: {
+          back: "← Back",
+          confirm: "Confirm",
+          step1Title: "Language Select",
+          step2Title: "Enter Pump Number (1 - 12)",
+          step2Error: "Please enter a pump number between 1 and 12.",
+          step3Title: "Select Fuel Amount",
+          step3Other: "Other Amount",
+          step3CustomTitle: "Enter Amount ($)",
+          step3Error: "Please enter an amount of $5 or more.",
+          step3Confirm: "Confirm Amount &rarr;",
+          step2Confirm: "Confirm Pump &rarr;",
+          step4Title: "Please Choose Fuel Grade",
+          step5Done: "Transaction Done!",
+          step5Instruction: "Please walk to <strong>Pump {pump}</strong>.<br>Press the <strong>{grade}</strong> button on the physical pump, then begin pumping.",
+          newCustomer: "New Customer / Start Over",
+          regular: "87 Regular",
+          midgrade: "89 Mid-grade",
+          premium: "93 Premium",
+          clerkLabel: "Clerk Summary (English Only)",
+          unitLabel: "Price / Gallon"
+        },
+        es: {
+          back: "← Volver",
+          confirm: "Confirmar",
+          step1Title: "Selección de Idioma",
+          step2Title: "Ingrese el Número de Bomba (1 - 12)",
+          step2Error: "Ingrese una bomba entre el número 1 y 12.",
+          step3Title: "Seleccione la Cantidad de Gasolina",
+          step3Other: "Otra Cantidad",
+          step3CustomTitle: "Ingrese el Valor ($)",
+          step3Error: "Por favor, ingrese un valor de $5 o más.",
+          step3Confirm: "Confirmar Cantidad &rarr;",
+          step2Confirm: "Confirmar Bomba &rarr;",
+          step4Title: "Elija el Tipo de Gasolina",
+          step5Done: "¡Listo!",
+          step5Instruction: "Por favor diríjase a la <strong>Bomba {pump}</strong> afuera.<br>Presione el botón de <strong>{grade}</strong> en la bomba física, luego comience a bombear.",
+          newCustomer: "Cliente Nuevo / Reiniciar",
+          regular: "87 Regular",
+          midgrade: "89 Semi-especial",
+          premium: "93 Premium",
+          clerkLabel: "Resumen de Cajera (Solo Inglés)",
+          unitLabel: "Precio por Galón"
+        },
+        pt: {
+          back: "← Voltar",
+          confirm: "Confirmar",
+          step1Title: "Seleção de Idioma",
+          step2Title: "Insira o Número da Bomba (1 - 12)",
+          step2Error: "Insira uma bomba entre 1 e 12.",
+          step3Title: "Selecione o Valor do Combustível",
+          step3Other: "Outro Valor",
+          step3CustomTitle: "Insira o Valor ($)",
+          step3Error: "Insira um valor de $5 ou mais.",
+          step3Confirm: "Confirmar Valor &rarr;",
+          step2Confirm: "Confirmar Bomba &rarr;",
+          step4Title: "Selecione o Tipo de Combustível",
+          step5Done: "Prontinho!",
+          step5Instruction: "Vá para a <strong>Bomba {pump}</strong> lá fora.<br>Pressione o botão de <strong>{grade}</strong> na bomba de combustível física, depois comece a abastecer.",
+          newCustomer: "Próximo Cliente / Reiniciar",
+          regular: "87 Regular",
+          midgrade: "89 Intermediário",
+          premium: "93 Premium",
+          clerkLabel: "Resumo de Atendimento (Inglês)",
+          unitLabel: "Preço / Galão"
+        },
+        ht: {
+          back: "← Retounen",
+          confirm: "Konfime",
+          step1Title: "Kòmanse / Chwazi Lang",
+          step2Title: "Mete Nimewo Ponp lan (1 - 12)",
+          step2Error: "Tanpri mete yon nimewo ponp ant 1 ak 12.",
+          step3Title: "Chwazi Kantite Lajan Gaz",
+          step3Other: "Lòt Kantite Lajan",
+          step3CustomTitle: "Mete Kantite Lajan ($)",
+          step3Error: "Tanpri mete yon kantite lajan $5 oswa plis.",
+          step3Confirm: "Konfime Kantite lajan &rarr;",
+          step2Confirm: "Konfime Ponp &rarr;",
+          step4Title: "Chwazi Kalite Gaz",
+          step5Done: "Tranzaksyon Fini!",
+          step5Instruction: "Tanpri mache ale sou <strong>Ponp {pump}</strong> deyò a.<br>Peze bouton <strong>{grade}</strong> sou ponp lan, epi kòmanse mete gaz.",
+          newCustomer: "Nouvo Kliyan / Rekòmanse",
+          regular: "87 Regilye",
+          midgrade: "89 Mwayen",
+          premium: "93 Premium",
+          clerkLabel: "Rezime Klerk (Angle sèlman)",
+          unitLabel: "Pri / Galon"
+        },
+        jam: {
+          back: "← Back",
+          confirm: "Confirm",
+          step1Title: "Choose yuh Language",
+          step2Title: "Enter yuh Pump Numba (1 - 12)",
+          step2Error: "Type a pump number from 1 up to 12.",
+          step3Title: "Pick di amount a gas yuh buyin",
+          step3Other: "Odda Amount",
+          step3CustomTitle: "Enter amount inna dollars ($)",
+          step3Error: "Likin gas must be $5 or more, enter again.",
+          step3Confirm: "Confirm Amount &rarr;",
+          step2Confirm: "Confirm Pump &rarr;",
+          step4Title: "Select yuh gas grade",
+          step5Done: "Transaction Done!",
+          step5Instruction: "Now walk ova to <strong>Pump {pump}</strong> outside.<br>Press di <strong>{grade}</strong> button pon di fuel pump machine, and start pump yuh gas.",
+          newCustomer: "Next Custama / Start Ova",
+          regular: "87 Regular",
+          midgrade: "89 Midgrade",
+          premium: "93 Premium",
+          clerkLabel: "Clerk Info (English)",
+          unitLabel: "Price / Gallon"
+        }
+      };
+
+      // --- Kiosk State ---
+      const state = {
+        step: 1,
+        locale: 'en',
+        pumpValStr: '',
+        amountValStr: '',
+        presetAmount: null, // number if preset chosen
+        grade: null // 'regular', 'midgrade', 'premium'
+      };
+
+      // --- State Router ---
+      function renderActiveScreen() {
+        // Shared navigation header control
+        const header = document.getElementById('shared-header');
+        if (state.step === 1 || state.step === 5) {
+          header.style.visibility = 'hidden';
+        } else {
+          header.style.visibility = 'visible';
+          // Update the step number indicator
+          document.getElementById('step-indicator').textContent = `${translations[state.locale].back.toUpperCase()} | STEP ${state.step} / 5`;
+        }
+
+        // Hide all screens, show current
+        for (let i = 1; i <= 5; i++) {
+          const screen = document.getElementById(`screen-${i}`);
+          if (i === state.step) {
+            screen.classList.add('active-screen');
+          } else {
+            screen.classList.remove('active-screen');
+          }
+        }
+
+        // Translate current screen tags based on locale
+        localizeAppText();
+
+        // Screen Specific Updates
+        if (state.step === 2) {
+          updatePumpDisplay();
+        } else if (state.step === 3) {
+          // Reset custom sub-panel view when entering step 3
+          document.getElementById('preset-amount-container').style.display = 'flex';
+          document.getElementById('custom-amount-panel').style.display = 'none';
+          updateAmountDisplay();
+        } else if (state.step === 5) {
+          renderSuccessScreen();
+        }
+      }
+
+      function transitionToStep(targetStep) {
+        state.step = targetStep;
+        renderActiveScreen();
+      }
+
+      // --- Step 1: Language Handling ---
+      function selectLocale(localeCode) {
+        state.locale = localeCode;
+        transitionToStep(2);
+      }
+
+      // --- Step 2: Pump Handling ---
+      function pressPumpDigit(digit) {
+        // Pumps are 1 - 12, max length 2 digits makes sense
+        if (state.pumpValStr.length < 2) {
+          state.pumpValStr += digit;
+          updatePumpDisplay();
+        }
+      }
+
+      function deletePumpDigit() {
+        state.pumpValStr = state.pumpValStr.slice(0, -1);
+        updatePumpDisplay();
+      }
+
+      function clearPumpDigits() {
+        state.pumpValStr = '';
+        updatePumpDisplay();
+      }
+
+      function updatePumpDisplay() {
+        const readout = document.getElementById('pump-readout');
+        const confirmBtn = document.getElementById('pump-confirm-btn');
+        const errDiv = document.getElementById('pump-error');
+        
+        errDiv.textContent = ''; // clear error initially
+
+        if (state.pumpValStr.length === 0) {
+          readout.textContent = 'PUMP --';
+          confirmBtn.disabled = true;
+          return;
+        }
+
+        const pumpInt = parseInt(state.pumpValStr, 10);
+        readout.textContent = `PUMP ${pumpInt}`;
+
+        // Validate range 1 to 12
+        if (pumpInt >= 1 && pumpInt <= 12) {
+          confirmBtn.disabled = false;
+        } else {
+          confirmBtn.disabled = true;
+          // Only show error feedback when 2 digits are filled or invalid number entered
+          if (state.pumpValStr.length >= 2 || pumpInt > 12 || pumpInt === 0) {
+            errDiv.textContent = translations[state.locale].step2Error;
+          }
+        }
+      }
+
+      function confirmPump() {
+        const pumpInt = parseInt(state.pumpValStr, 10);
+        if (pumpInt >= 1 && pumpInt <= 12) {
+          transitionToStep(3);
+        }
+      }
+
+      // --- Step 3: Amount Handling ---
+      function selectAmountPreset(numberValue) {
+        state.presetAmount = numberValue;
+        state.amountValStr = ''; // clear custom
+        transitionToStep(4);
+      }
+
+      function showCustomAmountKeypad() {
+        document.getElementById('preset-amount-container').style.display = 'none';
+        document.getElementById('custom-amount-panel').style.display = 'flex';
+        state.presetAmount = null;
+        state.amountValStr = '';
+        updateAmountDisplay();
+      }
+
+      function cancelCustomAmount() {
+        document.getElementById('custom-amount-panel').style.display = 'none';
+        document.getElementById('preset-amount-container').style.display = 'flex';
+        state.amountValStr = '';
+        updateAmountDisplay();
+      }
+
+      function pressAmountDigit(digit) {
+        // Prevent typing more than 3 digits to block crazy inputs
+        if (state.amountValStr.length < 3) {
+          // Disallow starting with 0
+          if (state.amountValStr.length === 0 && digit === '0') return;
+          state.amountValStr += digit;
+          updateAmountDisplay();
+        }
+      }
+
+      function deleteAmountDigit() {
+        state.amountValStr = state.amountValStr.slice(0, -1);
+        updateAmountDisplay();
+      }
+
+      function updateAmountDisplay() {
+        const readout = document.getElementById('amount-readout');
+        const confirmBtn = document.getElementById('amount-confirm-btn');
+        const errDiv = document.getElementById('amount-error');
+        
+        errDiv.textContent = '';
+
+        if (state.amountValStr.length === 0) {
+          readout.textContent = '$ --';
+          confirmBtn.disabled = true;
+          return;
+        }
+
+        const amtVal = parseInt(state.amountValStr, 10);
+        readout.textContent = `$ ${amtVal}`;
+
+        // Validate amount is at least $5
+        if (amtVal >= 5) {
+          confirmBtn.disabled = false;
+        } else {
+          confirmBtn.disabled = true;
+          if (state.amountValStr.length > 0) {
+            errDiv.textContent = translations[state.locale].step3Error;
+          }
+        }
+      }
+
+      function confirmCustomAmount() {
+        const amtVal = parseInt(state.amountValStr, 10);
+        if (amtVal >= 5) {
+          transitionToStep(4);
+        }
+      }
+
+      // --- Step 4: Fuel Grade Handling ---
+      function selectFuelGrade(selectedGrade) {
+        state.grade = selectedGrade;
+        transitionToStep(5);
+      }
+
+      // --- Step 5: Success & Customer Facing Screen Render ---
+      function renderSuccessScreen() {
+        const localizedDict = translations[state.locale];
+        
+        // Pump Int & string
+        const pumpInt = parseInt(state.pumpValStr, 10);
+        
+        // Active display fuel grade text translated
+        let fuelGradeNameTranslated = '';
+        if (state.grade === 'regular') {
+          fuelGradeNameTranslated = localizedDict.regular;
+        } else if (state.grade === 'midgrade') {
+          fuelGradeNameTranslated = localizedDict.midgrade;
+        } else {
+          fuelGradeNameTranslated = localizedDict.premium;
+        }
+
+        // Fill dynamic localized walk instructions
+        let instructionText = localizedDict.step5Instruction;
+        instructionText = instructionText.replace('{pump}', pumpInt);
+        instructionText = instructionText.replace('{grade}', fuelGradeNameTranslated);
+        document.getElementById('success-instructions').innerHTML = instructionText;
+
+        // Clerk English visual layout card values
+        document.getElementById('clerk-pump').textContent = pumpInt;
+        
+        const finalPrice = state.presetAmount ? `$${state.presetAmount}` : `$${state.amountValStr}`;
+        document.getElementById('clerk-amount').textContent = finalPrice;
+        
+        // Map grade to clear english label for clerk
+        let debugEnglishGrade = '87 Regular';
+        if (state.grade === 'midgrade') debugEnglishGrade = '89 Mid-grade';
+        if (state.grade === 'premium') debugEnglishGrade = '93 Premium';
+        document.getElementById('clerk-grade').textContent = debugEnglishGrade;
+
+        // SVG gas button highlighting selection
+        highlightSvgGradeButton();
+      }
+
+      function highlightSvgGradeButton() {
+        // Reset all buttons to semi-transparent faded state
+        const regularBtn = document.getElementById('svg-btn-regular');
+        const midGradeBtn = document.getElementById('svg-btn-midgrade');
+        const premiumBtn = document.getElementById('svg-btn-premium');
+        
+        regularBtn.setAttribute('opacity', '0.25');
+        midGradeBtn.setAttribute('opacity', '0.25');
+        premiumBtn.setAttribute('opacity', '0.25');
+
+        // Hide all pulsing rings and pointer arrows
+        const pulses = document.getElementsByClassName('svg-pulse');
+        for (let i = 0; i < pulses.length; i++) {
+          pulses[i].style.display = 'none';
+          pulses[i].classList.remove('svg-pulse-active');
+        }
+        document.getElementById('svg-arrow-regular').style.display = 'none';
+        document.getElementById('svg-arrow-midgrade').style.display = 'none';
+        document.getElementById('svg-arrow-premium').style.display = 'none';
+
+        // Highlighting active choice
+        const activeBtnGroup = document.getElementById(`svg-btn-${state.grade}`);
+        if (activeBtnGroup) {
+          activeBtnGroup.setAttribute('opacity', '1.0');
+        }
+
+        const pulseRing = document.getElementById(`svg-pulse-${state.grade}`);
+        if (pulseRing) {
+          pulseRing.classList.add('svg-pulse-active');
+        }
+
+        const arrowObj = document.getElementById(`svg-arrow-${state.grade}`);
+        if (arrowObj) {
+          arrowObj.style.display = 'block';
+        }
+      }
+
+      // --- Backward Navigation ---
+      function handleBack() {
+        if (state.step > 1 && state.step < 5) {
+          // Reset immediate local choices when backing out
+          if (state.step === 2) {
+            state.pumpValStr = '';
+          } else if (state.step === 3) {
+            state.presetAmount = null;
+            state.amountValStr = '';
+          } else if (state.step === 4) {
+            state.grade = null;
+          }
+          transitionToStep(state.step - 1);
+        }
+      }
+
+      // --- Global reset / Next customer ---
+      function resetState() {
+        state.step = 1;
+        state.pumpValStr = '';
+        state.presetAmount = null;
+        state.amountValStr = '';
+        state.grade = null;
+        renderActiveScreen();
+      }
+
+      // --- Dynamic Text Localizer Handler ---
+      function localizeAppText() {
+        const dict = translations[state.locale];
+        if (!dict) return;
+
+        // Apply translations to various structural prompt nodes
+        document.getElementById('back-nav-btn').innerHTML = dict.back;
+        
+        // Step titles
+        document.getElementById('prompt-step1').textContent = dict.step1Title;
+        document.getElementById('prompt-step2').textContent = dict.step2Title;
+        document.getElementById('prompt-step3').textContent = dict.step3Title;
+        document.getElementById('prompt-step3-custom').textContent = dict.step3CustomTitle;
+        document.getElementById('prompt-step4').textContent = dict.step4Title;
+        
+        // Buttons and errors
+        document.getElementById('btn-amount-other').textContent = dict.step3Other;
+        document.getElementById('amount-confirm-btn').innerHTML = dict.step3Confirm;
+        document.getElementById('pump-confirm-btn').innerHTML = dict.step2Confirm;
+        
+        // Grades text labels
+        document.getElementById('lbl-grade-regular').textContent = dict.regular;
+        document.getElementById('lbl-grade-midgrade').textContent = dict.midgrade;
+        document.getElementById('lbl-grade-premium').textContent = dict.premium;
+        
+        // Step 5 Done tags & restart button text
+        document.getElementById('success-done').textContent = dict.step5Done;
+        document.getElementById('txt-btn-new-customer').textContent = dict.newCustomer;
+      }
+
+      // --- Initial Page Launcher ---
+      window.addEventListener('DOMContentLoaded', () => {
+        renderActiveScreen();
+      });
+    </script>
+  </body>
+</html>

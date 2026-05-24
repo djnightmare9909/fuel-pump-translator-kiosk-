@@ -1,0 +1,6 @@
+{
+  "name": "Fuel Sales Kiosk",
+  "description": "An offline-first kiosk application for convenience stores to resolve communication barriers for fuel sales.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
